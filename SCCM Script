@@ -1,0 +1,57 @@
+var label = the name of the data source/transform map
+dataSource.jdbc_server = the server ip address
+dataSource.jdbc_user_name = credentials provided by client
+dataSource.jdbc_password = credential provided by client
+//---------------------------------------------------------- Replace 2016 in the name of the data source and transform import set table to the label field ----------------------------------------------------------//
+
+var label = 'ASPAC'
+
+
+var dataSource = new GlideRecord('sys_data_source');
+dataSource.addEncodedQuery("category=SCCM 2016 Integration^sys_updated_by=system"); // category=SCCM 2016 Integration^sys_updated_by=system
+dataSource.query();
+
+gs.print(dataSource.getRowCount());
+
+while(dataSource.next()) {
+
+var id = dataSource.import_set_table_name.toString();
+
+//--------------------------------------------------------- Enter in the Server IP Address, username and password for the records you are trying to insert ---------------------------------------------------------//
+
+dataSource.jdbc_server = '10.200.5.64';
+dataSource.jdbc_user_name = 'matt.hart';
+dataSource.jdbc_password = 'Charlie11';
+
+//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
+
+dataSource.import_set_table_label = dataSource.import_set_table_label.replace('2016', label);
+dataSource.name = dataSource.name.replace('2016', label);
+dataSource.import_set_table_name = dataSource.import_set_table_name.replace('2016', label.toLowerCase());
+dataSource.insert();
+
+
+
+//Insert transform maps into the system
+var transform = new GlideRecord('sys_transform_map');
+transform.addQuery('source_table', id);
+transform.query();
+
+while(transform.next()) {
+var transformId = transform.sys_id.toString();
+transform.source_table = dataSource.import_set_table_name;
+transform.name = transform.name.replace('2016', label);
+transform.insert();
+
+//Insert field maps into the system
+var fieldMaps = new GlideRecord('sys_transform_entry');
+fieldMaps.addQuery('map', transformId);
+fieldMaps.query();
+
+while(fieldMaps.next()) {
+fieldMaps.map = transform.sys_id;
+fieldMaps.source_table = dataSource.import_set_table_name;
+fieldMaps.insert();
+}
+}
+}
